@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DISUC — Segmentación de Inventario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand">
+    <div class="container">
+        <a href="/" class="navbar-brand">DISUC</a>
+        <div class="navbar-nav flex-row gap-2 ms-2">
+            <a href="/" class="nav-link">Inicio</a>
+            <a href="/prediction" class="nav-link">Predicción</a>
+            <a href="/segmentation" class="nav-link nav-link-active">Segmentación</a>
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <span class="badge-db">
+                <span class="dot"></span> Base de datos
+            </span>
+        </div>
+    </div>
+</nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-11 col-xl-10">
+
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">Segmentación de Inventario</h1>
+                <p class="lead text-secondary col-lg-10 mx-auto">
+                    Clasifica automáticamente los lotes vigentes en tres niveles de riesgo mediante K-Means, utilizando días para vencer, valor económico y rotación del producto.
+                </p>
+            </div>
+
+            <div class="d-flex justify-content-center gap-3 mb-4 flex-wrap">
+                <button class="btn btn-predict" id="btn-segmentar">Ejecutar Segmentación</button>
+                <button class="btn btn-download" id="btn-download" disabled>Descargar Excel</button>
+            </div>
+
+            <div id="error-msg" class="error-msg text-center mb-3" role="alert"></div>
+
+            <div id="seg-result" style="display:none;">
+
+                <div class="row g-3 mb-4" id="indicators">
+                    <div class="col-6 col-md-3">
+                        <div class="indicator-card">
+                            <span class="indicator-value" id="ind-total">—</span>
+                            <span class="indicator-label">Total Lotes</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="indicator-card card-riesgo-alto">
+                            <span class="indicator-value" id="ind-alto">—</span>
+                            <span class="indicator-label">Riesgo Alto</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="indicator-card card-riesgo-medio">
+                            <span class="indicator-value" id="ind-medio">—</span>
+                            <span class="indicator-label">Riesgo Medio</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="indicator-card card-riesgo-bajo">
+                            <span class="indicator-value" id="ind-bajo">—</span>
+                            <span class="indicator-label">Riesgo Bajo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-lg-8">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <span class="chart-card-title">Distribución de Clusters</span>
+                                <span class="chart-card-subtitle">Tamaño del punto = valor económico del lote</span>
+                            </div>
+                            <div id="scatter-plot" style="height:420px;"></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <span class="chart-card-title">Centroides</span>
+                                <span class="chart-card-subtitle">Variables normalizadas (z-score)</span>
+                            </div>
+                            <div id="heatmap-container">
+                                <table class="heatmap-table" id="heatmap-table">
+                                    <thead><tr></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-12 col-xl-9">
+                        <div class="table-card">
+                            <div class="table-card-header">
+                                <span class="table-card-title">Resultados por Lote</span>
+                                <div class="search-wrap">
+                                    <input type="text" id="search-input" class="form-control form-control-sm" placeholder="Buscar producto o código...">
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table seg-table seg-table-nowrap" id="seg-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Lote</th>
+                                            <th>Cluster</th>
+                                            <th>Riesgo</th>
+                                            <th>Días</th>
+                                            <th>Stock</th>
+                                            <th>Rotación</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="seg-tbody" class="seg-tbody-nowrap"></tbody>
+                                </table>
+                            </div>
+                            <div class="table-card-footer" id="table-count"></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-xl-3">
+                        <div class="detail-card" id="detail-card">
+                            <div class="detail-card-header">
+                                <span class="table-card-title">Detalle del Lote</span>
+                            </div>
+                            <div class="detail-card-body" id="detail-body">
+                                <p class="text-secondary mb-0" style="font-size:0.9rem;">Selecciona una fila en la tabla para ver los detalles.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="d-flex justify-content-center gap-2 mt-4 flex-wrap">
+                <span class="data-badge" id="clientes-count">— clientes</span>
+                <span class="data-badge" id="productos-count">— productos</span>
+                <span class="data-badge" id="lotes-count">— lotes</span>
+                <span class="data-badge" id="ventas-count">— ventas</span>
+                <span class="data-badge" id="pedidos-count">— pedidos</span>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <p class="mb-0">DISUC — Proyecto Académico de Business Intelligence & Machine Learning</p>
+    </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="/static/segmentation.js"></script>
+</body>
+</html>

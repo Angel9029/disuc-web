@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DISUC — Sistema Predictivo de Demanda</title>
+    <title>DISUC — Carga de Datos</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,9 +14,13 @@
 
 <nav class="navbar navbar-expand">
     <div class="container">
-        <span class="navbar-brand">DISUC</span>
-        <span class="navbar-subtitle ms-2 d-none d-sm-inline">Sistema Predictivo de Demanda</span>
-        <div class="ms-auto">
+        <a href="/" class="navbar-brand">DISUC</a>
+        <div class="navbar-nav flex-row gap-2 ms-2">
+            <a href="/" class="nav-link nav-link-active">Inicio</a>
+            <a href="/prediction" class="nav-link">Predicción</a>
+            <a href="/segmentation" class="nav-link">Segmentación</a>
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-3">
             <span class="badge-db">
                 <span class="dot"></span> Base de datos
             </span>
@@ -29,138 +33,65 @@
         <div class="col-lg-8 col-xl-7">
 
             <div class="text-center mb-5">
-                <h1 class="display-5 fw-bold">Pronóstico de Demanda</h1>
+                <h1 class="display-5 fw-bold">Carga de Datos</h1>
                 <p class="lead text-secondary col-lg-10 mx-auto">
-                    Busca un producto y selecciona una fecha futura para obtener su demanda pronosticada con el modelo SARIMA.
+                    Sube archivos CSV o ZIP con los datos del negocio para alimentar los módulos de pronóstico y segmentación.
                 </p>
             </div>
 
-            <div class="predict-card">
-                <form id="predict-form" autocomplete="off" novalidate>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-5">
-                            <label for="producto-input" class="form-label fw-medium">Producto</label>
-                            <div class="autocomplete-wrap">
-                                <input type="text" id="producto-input" class="form-control"
-                                       placeholder="Escribe para buscar..."
-                                       required>
-                                <ul id="autocomplete-list" class="autocomplete-list"></ul>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="fecha-input" class="form-label fw-medium">Fecha</label>
-                            <input type="date" id="fecha-input" class="form-control" required
-                                   pattern="\d{4}-\d{2}-01"
-                                   title="La fecha debe ser el primer dia de un mes (YYYY-MM-01)">
-                        </div>
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-predict w-100" id="btn-predict" disabled>
-                                Predecir
-                            </button>
-                        </div>
-                    </div>
-                    <div id="error-msg" class="error-msg" role="alert"></div>
-                </form>
-            </div>
-
-            <div id="result-card" class="result-card">
-                <div class="result-header">
-                    <span class="result-label">Resultado del Pronóstico</span>
-                    <span id="result-modelo" class="result-badge"></span>
+            <div class="home-cards row g-3 mb-4">
+                <div class="col-6">
+                    <a href="/prediction" class="home-card">
+                        <span class="home-card-icon">
+                            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 3a11 11 0 100 22 11 11 0 000-22zm-1 16v-6h2v6h-2zm0-8V7h2v4h-2z" fill="currentColor"/></svg>
+                        </span>
+                        <span class="home-card-title">Pronóstico</span>
+                        <span class="home-card-desc">Demanda SARIMA</span>
+                    </a>
                 </div>
-                <div class="result-body">
-                    <div class="row g-4">
-                        <div class="col-6 col-md-3">
-                            <div class="result-metric">
-                                <span class="metric-label">Producto</span>
-                                <span id="result-producto" class="metric-value"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="result-metric">
-                                <span class="metric-label">Fecha</span>
-                                <span id="result-fecha" class="metric-value"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="result-metric">
-                                <span class="metric-label">Demanda Pronosticada</span>
-                                <span id="result-pronostico" class="metric-value metric-highlight"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="result-metric">
-                                <span class="metric-label">MAPE</span>
-                                <span id="result-mape" class="metric-value"></span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-6">
+                    <a href="/segmentation" class="home-card">
+                        <span class="home-card-icon">
+                            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 3a11 11 0 100 22 11 11 0 000-22zm-1 16v-6h2v6h-2zm0-8V7h2v4h-2z" fill="currentColor"/></svg>
+                        </span>
+                        <span class="home-card-title">Segmentación</span>
+                        <span class="home-card-desc">Riesgo de inventario</span>
+                    </a>
                 </div>
             </div>
 
             <div class="d-flex justify-content-center gap-2 mt-4 flex-wrap">
                 <span class="data-badge" id="clientes-count">— clientes</span>
                 <span class="data-badge" id="productos-count">— productos</span>
+                <span class="data-badge" id="lotes-count">— lotes</span>
                 <span class="data-badge" id="ventas-count">— ventas</span>
                 <span class="data-badge" id="pedidos-count">— pedidos</span>
             </div>
 
+            <div id="data-banner" class="data-banner" style="display:none;">
+                <div class="data-banner-icon" id="data-banner-icon">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 18a8 8 0 100-16 8 8 0 000 16z" fill="currentColor"/></svg>
+                </div>
+                <div class="data-banner-text" id="data-banner-text">Datos cargados</div>
+            </div>
+
             <details class="mt-5 upload-section">
                 <summary class="fw-medium text-secondary" style="cursor:pointer;font-size:0.9rem;">
-                    Carga de archivos CSV
+                    Carga de archivos
                 </summary>
                 <div class="mt-3">
-                    <div class="row g-2" id="upload-grid">
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-clientes">
-                                <span>Clientes</span>
-                                <input type="file" id="file-clientes" accept=".csv" hidden data-endpoint="clientes">
-                            </label>
+                    <div class="drop-zone" id="drop-zone">
+                        <div class="drop-zone-content">
+                            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                <path d="M20 5a15 15 0 100 30 15 15 0 000-30zm-1.5 20V15.5l-3.5 3.5-1.5-1.5 5.5-5.5 5.5 5.5-1.5 1.5-3.5-3.5V25h-1z" fill="currentColor" opacity="0.6"/>
+                            </svg>
+                            <p class="drop-zone-title">Arrastra archivos CSV o ZIP aquí</p>
+                            <p class="drop-zone-hint">o haz clic para seleccionar &mdash; acepta .csv y .zip</p>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-categorias">
-                                <span>Categorias</span>
-                                <input type="file" id="file-categorias" accept=".csv" hidden data-endpoint="categorias">
-                            </label>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-productos">
-                                <span>Productos</span>
-                                <input type="file" id="file-productos" accept=".csv" hidden data-endpoint="productos">
-                            </label>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-ventas">
-                                <span>Ventas</span>
-                                <input type="file" id="file-ventas" accept=".csv" hidden data-endpoint="ventas">
-                            </label>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-pedidos">
-                                <span>Pedidos</span>
-                                <input type="file" id="file-pedidos" accept=".csv" hidden data-endpoint="pedidos">
-                            </label>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-lotes">
-                                <span>Lotes</span>
-                                <input type="file" id="file-lotes" accept=".csv" hidden data-endpoint="lotes">
-                            </label>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-dim_tiempo">
-                                <span>Dim Tiempo</span>
-                                <input type="file" id="file-dim_tiempo" accept=".csv" hidden data-endpoint="dim_tiempo">
-                            </label>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="upload-btn" for="file-modelos">
-                                <span>Mejores Modelos</span>
-                                <input type="file" id="file-modelos" accept=".csv" hidden data-endpoint="mejores_modelos">
-                            </label>
-                        </div>
+                        <input type="file" id="file-input" accept=".csv,.zip" multiple hidden>
                     </div>
-                    <div id="upload-feedback" class="mt-2"></div>
+                    <div id="upload-progress" class="mt-2"></div>
+                    <div id="upload-summary" class="mt-2"></div>
                 </div>
             </details>
 

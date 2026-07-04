@@ -1,3 +1,7 @@
+const API_BASE = '';
+const isPredictionPage = !!document.getElementById('predict-form');
+
+if (isPredictionPage) {
 const productoInput = document.getElementById('producto-input');
 const autocompleteList = document.getElementById('autocomplete-list');
 const fechaInput = document.getElementById('fecha-input');
@@ -6,7 +10,6 @@ const btnPredict = document.getElementById('btn-predict');
 const errorMsg = document.getElementById('error-msg');
 const resultCard = document.getElementById('result-card');
 
-const API_BASE = '';
 let selectedProduct = null;
 let searchTimeout = null;
 
@@ -137,6 +140,12 @@ predictForm.addEventListener('submit', async function(e) {
         return;
     }
 
+    const dataOk = await checkData();
+    if (!dataOk) {
+        showError('No hay datos cargados. Sube archivos CSV desde la pagina principal.');
+        return;
+    }
+
     btnPredict.classList.add('loading');
     btnPredict.disabled = true;
 
@@ -172,6 +181,7 @@ function showError(msg) {
     errorMsg.textContent = msg;
     errorMsg.classList.add('visible');
 }
+}
 
 async function loadCounts() {
     try {
@@ -179,38 +189,171 @@ async function loadCounts() {
         const data = await res.json();
         document.getElementById('clientes-count').textContent = `${data.clientes} clientes`;
         document.getElementById('productos-count').textContent = `${data.productos} productos`;
+        if (document.getElementById('lotes-count')) {
+            document.getElementById('lotes-count').textContent = `${data.lotes} lotes`;
+        }
         document.getElementById('ventas-count').textContent = `${data.ventas} ventas`;
         document.getElementById('pedidos-count').textContent = `${data.pedidos} pedidos`;
     } catch (_) {}
 }
 
-document.querySelectorAll('.upload-btn input[type="file"]').forEach(input => {
-    input.addEventListener('change', async function() {
-        const file = this.files[0];
-        if (!file) return;
-        const endpoint = this.dataset.endpoint;
-        const label = this.closest('.upload-btn');
-        const fd = new FormData();
-        fd.append('file', file);
-        label.classList.add('uploaded');
-        label.querySelector('span').textContent = 'Subiendo...';
-        try {
-            const res = await fetch(`${API_BASE}/api/upload/${endpoint}`, { method: 'POST', body: fd });
-            const data = await res.json();
-            if (data.mensaje) {
-                label.querySelector('span').textContent = '\u2713 ' + (data.cargados || 'OK');
-                loadCounts();
-            } else {
-                label.querySelector('span').textContent = 'Error';
-                label.classList.remove('uploaded');
+const REQUIRED_TABLES = ['clientes', 'productos', 'lotes', 'pedidos', 'ventas', 'dim_tiempo'];
+const TABLE_LABELS = {
+    clientes: 'clientes', productos: 'productos', lotes: 'lotes',
+    pedidos: 'pedidos', ventas: 'ventas', dim_tiempo: 'dim. tiempo',
+};
+
+const LOADER_MAP = {
+    'clientes': 'clientes', 'categorias': 'categorias',
+    'productos': 'productos', 'ventas': 'ventas',
+    'pedidos': 'pedidos', 'lotes': 'lotes',
+    'dim_tiempo': 'dim_tiempo', 'mejores_modelos': 'mejores_modelos',
+    'dimtiempo': 'dim_tiempo', 'mejoresmodelos': 'mejores_modelos',
+};
+
+function detectEndpoint(filename) {
+    const name = filename.replace(/\.csv$/i, '').toLowerCase();
+    return LOADER_MAP[name] || null;
+}
+
+function addUploadItem(container, name, status, cls) {
+    const div = document.createElement('div');
+    div.className = 'upload-item';
+    div.innerHTML = `<span class="upload-item-name">${name}</span><span class="upload-item-status ${cls}">${status}</span>`;
+    container.appendChild(div);
+    return div;
+}
+
+function updateUploadItem(el, status, cls) {
+    el.querySelector('.upload-item-status').textContent = status;
+    el.querySelector('.upload-item-status').className = 'upload-item-status ' + cls;
+}
+
+async function uploadSingleFile(file, progressContainer, summaryContainer) {
+    const name = file.name;
+    const isZip = name.toLowerCase().endsWith('.zip');
+    const fd = new FormData();
+    fd.append('file', file);
+    const item = addUploadItem(progressContainer, name, 'Subiendo...', 'loading');
+    try {
+        let url;
+        if (isZip) {
+            url = `${API_BASE}/api/upload/zip`;
+        } else {
+            const ep = detectEndpoint(name);
+            if (!ep) {
+                updateUploadItem(item, 'Ignorado', 'err');
+                return;
             }
-        } catch (_) {
-            label.querySelector('span').textContent = 'Error';
-            label.classList.remove('uploaded');
+            url = `${API_BASE}/api/upload/${ep}`;
+        }
+        const res = await fetch(url, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (res.ok) {
+            if (isZip && data.resultados) {
+                const parts = Object.entries(data.resultados).map(([k, v]) => `${k}: ${v}`);
+                updateUploadItem(item, '\u2713 ' + parts.join(', '), 'ok');
+            } else {
+                updateUploadItem(item, '\u2713 OK', 'ok');
+            }
+        } else {
+            updateUploadItem(item, 'Error: ' + (data.detail || 'desconocido'), 'err');
+        }
+    } catch (_) {
+        updateUploadItem(item, 'Error de conexión', 'err');
+    }
+    loadCounts();
+    showDataBanner();
+}
+
+async function handleFiles(files) {
+    const container = document.getElementById('upload-progress');
+    const summary = document.getElementById('upload-summary');
+    container.innerHTML = '';
+    summary.innerHTML = '';
+    for (const file of files) {
+        await uploadSingleFile(file, container, summary);
+    }
+}
+
+function setupDropZone() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    if (!dropZone || !fileInput) return;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', function () {
+        if (this.files.length) {
+            handleFiles(this.files);
+            this.value = '';
         }
     });
-});
 
-document.addEventListener('DOMContentLoaded', () => {
+    ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+        });
+    });
+
+    dropZone.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length) handleFiles(files);
+    });
+}
+
+async function checkData() {
+    try {
+        const res = await fetch(`${API_BASE}/api/upload/status`);
+        const data = await res.json();
+        return data.productos > 0 && data.lotes > 0 && data.clientes > 0;
+    } catch (_) {
+        return false;
+    }
+}
+
+async function showDataBanner() {
+    const banner = document.getElementById('data-banner');
+    const text = document.getElementById('data-banner-text');
+    if (!banner || !text) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/upload/status`);
+        const data = await res.json();
+        banner.className = 'data-banner';
+        if (data.completo) {
+            const parts = REQUIRED_TABLES.filter(t => data[t] > 0).map(t => `${data[t]} ${TABLE_LABELS[t]}`);
+            text.textContent = `Datos completos: ${parts.join(', ')}`;
+            banner.classList.add('data-banner-ok');
+        } else if (data.faltantes && data.faltantes.length > 0) {
+            const missing = data.faltantes.map(t => TABLE_LABELS[t]);
+            const loadedParts = REQUIRED_TABLES.filter(t => data[t] > 0).map(t => `${data[t]} ${TABLE_LABELS[t]}`);
+            const loadedText = loadedParts.length ? ` — Cargados: ${loadedParts.join(', ')}` : '';
+            text.textContent = `Faltan: ${missing.join(', ')}.${loadedText}`;
+            banner.classList.add('data-banner-warn');
+        } else {
+            text.textContent = 'No hay datos cargados. Arrastra archivos CSV o ZIP para comenzar.';
+            banner.classList.add('data-banner-info');
+        }
+        banner.style.display = 'flex';
+    } catch (_) { }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     loadCounts();
+    setupDropZone();
+    showDataBanner();
+    const hasData = await checkData();
+    if (hasData) {
+        document.querySelectorAll('.no-data-msg').forEach(el => el.remove());
+    }
 });

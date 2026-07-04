@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.database import init_db, SessionLocal
 from app.services import CSVProcessor
-from app.routers import csv_upload, prediction
+from app.routers import csv_upload, prediction, segmentation
 
 os.makedirs('data', exist_ok=True)
 os.makedirs('templates', exist_ok=True)
@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Sistema Predictivo de Demanda DISUC", version="2.0.0", lifespan=lifespan)
 app.include_router(csv_upload.router)
 app.include_router(prediction.router)
+app.include_router(segmentation.router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -52,6 +53,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def root():
     return FileResponse("templates/index.html")
 
+
+@app.get("/prediction")
+async def prediction_page():
+    return FileResponse("templates/prediction.html")
+
+@app.get("/segmentation")
+async def segmentation_page():
+    return FileResponse("templates/segmentation.html")
 
 @app.get("/api/health")
 async def health():

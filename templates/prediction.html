@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DISUC — Pronóstico de Demanda</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand">
+    <div class="container">
+        <a href="/" class="navbar-brand">DISUC</a>
+        <div class="navbar-nav flex-row gap-2 ms-2">
+            <a href="/" class="nav-link">Inicio</a>
+            <a href="/prediction" class="nav-link nav-link-active">Predicción</a>
+            <a href="/segmentation" class="nav-link">Segmentación</a>
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <span class="badge-db">
+                <span class="dot"></span> Base de datos
+            </span>
+        </div>
+    </div>
+</nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">Pronóstico de Demanda</h1>
+                <p class="lead text-secondary col-lg-10 mx-auto">
+                    Busca un producto y selecciona una fecha futura para obtener su demanda pronosticada con el modelo SARIMA.
+                </p>
+            </div>
+
+            <div class="predict-card">
+                <form id="predict-form" autocomplete="off" novalidate>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label for="producto-input" class="form-label fw-medium">Producto</label>
+                            <div class="autocomplete-wrap">
+                                <input type="text" id="producto-input" class="form-control"
+                                       placeholder="Escribe para buscar..."
+                                       required>
+                                <ul id="autocomplete-list" class="autocomplete-list"></ul>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="fecha-input" class="form-label fw-medium">Fecha</label>
+                            <input type="date" id="fecha-input" class="form-control" required
+                                   pattern="\d{4}-\d{2}-01"
+                                   title="La fecha debe ser el primer dia de un mes (YYYY-MM-01)">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-predict w-100" id="btn-predict" disabled>
+                                Predecir
+                            </button>
+                        </div>
+                    </div>
+                    <div id="error-msg" class="error-msg" role="alert"></div>
+                </form>
+            </div>
+
+            <div id="result-card" class="result-card">
+                <div class="result-header">
+                    <span class="result-label">Resultado del Pronóstico</span>
+                    <span id="result-modelo" class="result-badge"></span>
+                </div>
+                <div class="result-body">
+                    <div class="row g-4">
+                        <div class="col-6 col-md-3">
+                            <div class="result-metric">
+                                <span class="metric-label">Producto</span>
+                                <span id="result-producto" class="metric-value"></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="result-metric">
+                                <span class="metric-label">Fecha</span>
+                                <span id="result-fecha" class="metric-value"></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="result-metric">
+                                <span class="metric-label">Demanda Pronosticada</span>
+                                <span id="result-pronostico" class="metric-value metric-highlight"></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="result-metric">
+                                <span class="metric-label">MAPE</span>
+                                <span id="result-mape" class="metric-value"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-2 mt-4 flex-wrap">
+                <span class="data-badge" id="clientes-count">— clientes</span>
+                <span class="data-badge" id="productos-count">— productos</span>
+                <span class="data-badge" id="lotes-count">— lotes</span>
+                <span class="data-badge" id="ventas-count">— ventas</span>
+                <span class="data-badge" id="pedidos-count">— pedidos</span>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <p class="mb-0">DISUC — Proyecto Académico de Business Intelligence & Machine Learning</p>
+    </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="/static/script.js"></script>
+</body>
+</html>
